@@ -1,19 +1,31 @@
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import ttk, messagebox, filedialog
 from PIL import Image, ImageTk
-from alumno_crud import agregar_alumno, obtener_alumnos, actualizar_alumno, borrar_alumno
+from alumno_crud import (
+    agregar_alumno, obtener_alumnos, actualizar_alumno, borrar_alumno,
+    validar_dni, validar_email, obtener_alumnos_paginados, contar_alumnos
+)
 from pdf_export import exportar_a_pdf, imprimir_pdf
+from adjuntos_utils import adjuntar_documento
+from backup_utils import backup_base_datos
 import platform
 import math
+
+# ------- Paginación -------
+pagina_actual = 0
+limit = 20
 
 def limpiar_formulario(campos):
     for campo in campos.values():
         campo.delete(0, tk.END)
 
-def cargar_datos(tree):
+def cargar_pagina(tree, filtro=None, ordenar=None):
+    global pagina_actual
+    offset = pagina_actual * limit
     for fila in tree.get_children():
         tree.delete(fila)
-    for i, alumno in enumerate(obtener_alumnos()):
+    datos = obtener_alumnos_paginados(offset=offset, limit=limit, filtro=filtro, ordenar=ordenar)
+    for i, alumno in enumerate(datos):
         tag = 'evenrow' if i % 2 == 0 else 'oddrow'
         tree.insert('', tk.END, values=alumno, tags=(tag,))
     tree.tag_configure('evenrow', background='#eaf3fc')
@@ -87,12 +99,20 @@ def crear_interfaz():
 
     def guardar():
         valores = [campos[k].get() for k in keys]
+        dni = valores[2]
+        email = valores[4]
         if not valores[0]:
             messagebox.showwarning("Atención", "El nombre es obligatorio.")
             return
+        if not validar_dni(dni):
+            messagebox.showerror("DNI inválido", "El DNI introducido no es válido.")
+            return
+        if not validar_email(email):
+            messagebox.showerror("Email inválido", "El email introducido no es válido.")
+            return
         try:
             agregar_alumno(*valores)
-            cargar_datos(tree)
+            cargar_pagina(tree)
             limpiar_formulario(campos)
             messagebox.showinfo("Éxito", "Alumno agregado correctamente.")
         except Exception as e:
@@ -103,9 +123,17 @@ def crear_interfaz():
             messagebox.showwarning("Selecciona", "Selecciona un alumno de la tabla.")
             return
         valores = [campos[k].get() for k in keys]
+        dni = valores[2]
+        email = valores[4]
+        if not validar_dni(dni):
+            messagebox.showerror("DNI inválido", "El DNI introducido no es válido.")
+            return
+        if not validar_email(email):
+            messagebox.showerror("Email inválido", "El email introducido no es válido.")
+            return
         try:
             actualizar_alumno(root.selected_id, *valores)
-            cargar_datos(tree)
+            cargar_pagina(tree)
             limpiar_formulario(campos)
             root.selected_id = None
             messagebox.showinfo("Éxito", "Alumno actualizado.")
@@ -119,7 +147,7 @@ def crear_interfaz():
         if messagebox.askyesno("Confirmar", "¿Seguro que quieres borrar este alumno?"):
             try:
                 borrar_alumno(root.selected_id)
-                cargar_datos(tree)
+                cargar_pagina(tree)
                 limpiar_formulario(campos)
                 root.selected_id = None
                 messagebox.showinfo("Éxito", "Alumno borrado.")
@@ -147,7 +175,26 @@ def crear_interfaz():
     scrollbar.grid(row=0, column=2, sticky='ns', pady=10)
     tree.configure(yscrollcommand=scrollbar.set)
 
-    cargar_datos(tree)
+    # Paginación
+    def siguiente_pagina():
+        global pagina_actual
+        total = contar_alumnos()
+        if (pagina_actual + 1) * limit < total:
+            pagina_actual += 1
+            cargar_pagina(tree)
+
+    def anterior_pagina():
+        global pagina_actual
+        if pagina_actual > 0:
+            pagina_actual -= 1
+            cargar_pagina(tree)
+
+    pag_btns = ttk.Frame(frame)
+    pag_btns.grid(row=2, column=1, pady=8, sticky='e')
+    ttk.Button(pag_btns, text="Anterior", command=anterior_pagina).pack(side='left', padx=6)
+    ttk.Button(pag_btns, text="Siguiente", command=siguiente_pagina).pack(side='left', padx=6)
+
+    cargar_pagina(tree)
 
     def seleccionar_fila(event):
         item = tree.focus()
@@ -162,7 +209,7 @@ def crear_interfaz():
 
     tree.bind('<<TreeviewSelect>>', seleccionar_fila)
 
-    # Botones PDF/Imprimir/Inicio/Salir (debajo de la tabla)
+    # Botones PDF/Imprimir/Inicio/Salir/Adjuntos/Backup (debajo de la tabla)
     extra_btns = ttk.Frame(frame)
     extra_btns.grid(row=1, column=1, pady=(14,0), sticky='w')
 
@@ -181,8 +228,26 @@ def crear_interfaz():
     def salir_app():
         root.destroy()
 
+    def adjuntar():
+        if not hasattr(root, 'selected_id') or not root.selected_id:
+            messagebox.showwarning("Selecciona", "Selecciona un alumno primero.")
+            return
+        ruta = filedialog.askopenfilename(title="Selecciona archivo")
+        if ruta:
+            adjuntar_documento(root.selected_id, ruta)
+            messagebox.showinfo("Adjunto", "Archivo adjuntado correctamente.")
+
+    def hacer_backup():
+        archivo = backup_base_datos()
+        if archivo:
+            messagebox.showinfo("Backup", f"Backup guardado en: {archivo}")
+        else:
+            messagebox.showerror("Backup", "No se pudo realizar el backup.")
+
     ttk.Button(extra_btns, text="📄 Exportar a PDF", command=exportar, style='Accent.TButton').pack(side='left', padx=6, ipadx=4, ipady=3)
     ttk.Button(extra_btns, text="🖨️ Imprimir", command=imprimir).pack(side='left', padx=6, ipadx=4, ipady=3)
+    ttk.Button(extra_btns, text="📎 Adjuntar documento", command=adjuntar).pack(side='left', padx=6, ipadx=4, ipady=3)
+    ttk.Button(extra_btns, text="💾 Backup", command=hacer_backup).pack(side='left', padx=6, ipadx=4, ipady=3)
     ttk.Button(extra_btns, text="🏠 Volver a inicio", command=volver_a_bienvenida, style='Accent.TButton').pack(side='left', padx=6, ipadx=4, ipady=3)
     ttk.Button(extra_btns, text="❌ Salir", command=salir_app, style='Accent.TButton').pack(side='left', padx=6, ipadx=4, ipady=3)
 
@@ -233,7 +298,6 @@ def pantalla_bienvenida():
             p1 = points_base[i]
             p2 = points_base[(i + 1) % 3]
             canvas.create_polygon(p1, p2, apex_abs, fill="#4f8a8b", outline="#ffffff", tags="pyramid")
-        # base
         canvas.create_polygon(*points_base, fill="#36608a", outline="#ffffff", tags="pyramid")
 
     def animate():
@@ -289,7 +353,7 @@ def pantalla_bienvenida():
 
     tk.Label(
         welcome,
-        text="© 2025 PRACTICADORES.DEV",
+        text="© 2025 PRACTICADORES.DEV ver.2.0",
         bg="#375aab",
         fg="#9dc7fb",
         font=("Segoe UI", 13, "italic")

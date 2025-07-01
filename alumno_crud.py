@@ -1,4 +1,5 @@
 import mysql.connector
+import re
 
 def conectar():
     return mysql.connector.connect(
@@ -7,6 +8,8 @@ def conectar():
         password="TuContraseñaSegura",  # Cambia por la tuya
         database="academia"
     )
+
+# --- CRUD BÁSICO ---
 
 def agregar_alumno(nombre, apellidos, dni, telefono, mail, fecha_nacimiento, niv_academico):
     conn = conectar()
@@ -48,3 +51,55 @@ def borrar_alumno(id):
     conn.commit()
     cursor.close()
     conn.close()
+
+# --- VALIDACIONES ---
+
+def validar_dni(dni):
+    letras = "TRWAGMYFPDXBNJZSQVHLCKE"
+    if not re.match(r'^\d{8}[A-Z]$', dni):
+        return False
+    numero = int(dni[:8])
+    letra_correcta = letras[numero % 23]
+    return dni[-1].upper() == letra_correcta
+
+def validar_email(email):
+    patron = r"^[\w\.-]+@[\w\.-]+\.\w+$"
+    return re.match(patron, email) is not None
+
+# --- PAGINACIÓN Y FILTRO AVANZADO ---
+
+def obtener_alumnos_paginados(offset=0, limit=20, filtro=None, ordenar=None):
+    conn = conectar()
+    cursor = conn.cursor()
+    sql = "SELECT id, nombre, apellidos, dni, telf, mail, f_nacimiento, niv_academico FROM alumnos"
+    params = []
+    if filtro:
+        sql += " WHERE nombre LIKE %s OR apellidos LIKE %s OR dni LIKE %s"
+        filtro_param = f"%{filtro}%"
+        params.extend([filtro_param, filtro_param, filtro_param])
+    if ordenar:
+        sql += f" ORDER BY {ordenar}"
+    else:
+        sql += " ORDER BY id DESC"
+    sql += " LIMIT %s OFFSET %s"
+    params.extend([limit, offset])
+    cursor.execute(sql, params)
+    res = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return res
+
+def contar_alumnos(filtro=None):
+    conn = conectar()
+    cursor = conn.cursor()
+    sql = "SELECT COUNT(*) FROM alumnos"
+    params = []
+    if filtro:
+        sql += " WHERE nombre LIKE %s OR apellidos LIKE %s OR dni LIKE %s"
+        filtro_param = f"%{filtro}%"
+        params.extend([filtro_param, filtro_param, filtro_param])
+    cursor.execute(sql, params)
+    n = cursor.fetchone()[0]
+    cursor.close()
+    conn.close()
+    return n

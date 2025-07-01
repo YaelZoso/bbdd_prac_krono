@@ -1,14 +1,16 @@
 import mysql.connector
 
 def crear_base_si_no_existe():
-    # Conecta al servidor MariaDB sin especificar base
+    # Conecta al servidor MySQL/MariaDB sin especificar base
     conn = mysql.connector.connect(
         host="localhost",
         user="root",
         password="TuContraseñaSegura"  # Cambia por la tuya
     )
     cursor = conn.cursor()
-    cursor.execute("CREATE DATABASE IF NOT EXISTS academia CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;")
+    cursor.execute(
+        "CREATE DATABASE IF NOT EXISTS academia CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+    )
     conn.commit()
     cursor.close()
     conn.close()
@@ -83,6 +85,24 @@ def crear_tablas():
         )
     ''')
 
+    # 6. Tabla de Adjuntos para documentos/fotos
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS adjuntos (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            alumno_id INT NOT NULL,
+            archivo VARCHAR(255) NOT NULL,
+            fecha_subida DATETIME DEFAULT CURRENT_TIMESTAMP,
+            descripcion VARCHAR(255),
+            FOREIGN KEY (alumno_id) REFERENCES alumnos(id) ON DELETE CASCADE
+        )
+    ''')
+
     conn.commit()
     cursor.close()
     conn.close()
+
+# Si quieres que el script se ejecute solo al llamar directamente:
+if __name__ == "__main__":
+    crear_base_si_no_existe()
+    crear_tablas()
+    print("Base de datos y tablas creadas o verificadas correctamente.")

@@ -1,8 +1,0 @@
-bbdd_prac_krono/
-│
-├── main.py
-├── database.py
-├── alumno_crud.py
-├── ui.py
-├── README.md
-├── LICENSE
