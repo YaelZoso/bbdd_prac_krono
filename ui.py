@@ -13,7 +13,7 @@ def crear_interfaz():
     tk.Label(root, text="Fecha Nacimiento").grid(row=3, column=0)
     tk.Label(root, text="Estudios").grid(row=4, column=0)
     tk.Label(root, text="Email").grid(row=5, column=0)
-    tk.Label(root, text="Teléfono").grid(row=6, column=0)
+    tk.Label(root, text="Telefono").grid(row=6, column=0)
 
     identificador = tk.Entry(root) 
     apellidos = tk.Entry(root)
@@ -35,7 +35,7 @@ def crear_interfaz():
 
     def guardar():
         agregar_alumno(identificador.get(), apellidos.get(), nombre.get(), dni.get(), fecha_nacimiento(), estudios.get(), email.get(), telefono.get(), )
-        messagebox.showinfo("Éxito", "Alumno agregado")
+        messagebox.showinfo("Alumno agregado")
 
     tk.Button(root, text="Guardar alumno", command=guardar).grid(row=7, column=0, columnspan=2)
 
