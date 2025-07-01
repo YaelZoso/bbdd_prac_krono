@@ -1,10 +1,13 @@
 # alumno_crud.py
 import sqlite3
 
-def agregar_alumno(nombre, email, telefono):
+def agregar_alumno(nombre, apellidos, dni, fecha_nacimiento, estudios, email, telefono):
     conn = sqlite3.connect('academia.db')
     cursor = conn.cursor()
-    cursor.execute("INSERT INTO alumnos (nombre, email, telefono) VALUES (?, ?, ?)", (nombre, email, telefono))
+    cursor.execute(
+        "INSERT INTO alumnos (nombre, apellidos, dni, fecha_nacimiento, estudios, email, telefono) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        (nombre, apellidos, dni, fecha_nacimiento, estudios, email, telefono)
+    )
     conn.commit()
     conn.close()
 
