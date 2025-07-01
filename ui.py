@@ -1,75 +1,140 @@
 import tkinter as tk
-from tkinter import ttk, messagebox, filedialog
+from tkinter import ttk, messagebox
 from PIL import Image, ImageTk
-from alumno_crud import (
-    agregar_alumno, obtener_alumnos, actualizar_alumno, borrar_alumno,
-    validar_dni, validar_email, obtener_alumnos_paginados, contar_alumnos
-)
+from alumno_crud import agregar_alumno, obtener_alumnos, actualizar_alumno, borrar_alumno
+from crud_otros import agregar_curso, obtener_cursos, actualizar_curso, borrar_curso
 from pdf_export import exportar_a_pdf, imprimir_pdf
-from adjuntos_utils import adjuntar_documento
-from backup_utils import backup_base_datos
 import platform
 import math
 
-# ------- Paginación -------
-pagina_actual = 0
-limit = 20
+# Colores más fuertes para las pestañas
+TAB_COLORS = [
+    "#d4e2fc",   # Alumnos - azul claro fuerte
+    "#c1d6f8",   # Cursos
+    "#d9d6f2",   # Inscripciones
+    "#e2d9f4",   # Cursos Finalizados
+    "#dce4f7",   # Familias Profesionales
+    "#d0f0ed",   # Adjuntos
+]
+
+PAGINA_TAMANO = 20  # filas por página
 
 def limpiar_formulario(campos):
     for campo in campos.values():
         campo.delete(0, tk.END)
 
-def cargar_pagina(tree, filtro=None, ordenar=None):
-    global pagina_actual
-    offset = pagina_actual * limit
+# --- Funciones para cargar datos con paginación ---
+
+def cargar_datos_alumnos(tree, pagina=0):
     for fila in tree.get_children():
         tree.delete(fila)
-    datos = obtener_alumnos_paginados(offset=offset, limit=limit, filtro=filtro, ordenar=ordenar)
-    for i, alumno in enumerate(datos):
+    alumnos = obtener_alumnos()
+    inicio = pagina * PAGINA_TAMANO
+    fin = inicio + PAGINA_TAMANO
+    alumnos_pagina = alumnos[inicio:fin]
+    for i, alumno in enumerate(alumnos_pagina):
         tag = 'evenrow' if i % 2 == 0 else 'oddrow'
         tree.insert('', tk.END, values=alumno, tags=(tag,))
     tree.tag_configure('evenrow', background='#eaf3fc')
     tree.tag_configure('oddrow', background='#f7fbff')
+    return len(alumnos)
+
+def cargar_datos_cursos(tree, pagina=0):
+    for fila in tree.get_children():
+        tree.delete(fila)
+    cursos = obtener_cursos()
+    inicio = pagina * PAGINA_TAMANO
+    fin = inicio + PAGINA_TAMANO
+    cursos_pagina = cursos[inicio:fin]
+    for i, curso in enumerate(cursos_pagina):
+        tag = 'evenrow' if i % 2 == 0 else 'oddrow'
+        tree.insert('', tk.END, values=curso, tags=(tag,))
+    tree.tag_configure('evenrow', background='#eaf3fc')
+    tree.tag_configure('oddrow', background='#f7fbff')
+    return len(cursos)
+
+# --- INTERFAZ PRINCIPAL ---
 
 def crear_interfaz():
     root = tk.Tk()
-    root.title("AcademyGo - Gestión de Alumnos")
-
-    # Aplicar pantalla completa o maximizada según sistema operativo
+    root.title("AcademyGo - Gestión Integral")
     sistema = platform.system()
     if sistema == 'Windows':
         root.state('zoomed')
     else:
         root.attributes('-zoomed', True)
-
     root.configure(bg="#e9f0fb")
 
-    # Cabecera con logo grande y título
-    header = tk.Frame(root, bg="#375aab", height=170)
+    # Header
+    header = tk.Frame(root, bg="#375aab", height=76)
     header.pack(fill='x', side='top')
 
-    # Logo grande
-    logo_img = Image.open("academygo.png")
-    logo_img = logo_img.resize((150, 150), Image.LANCZOS)
+    logo_img = Image.open("academygo.png").resize((52, 52), Image.LANCZOS)
     logo_tk = ImageTk.PhotoImage(logo_img)
     logo_label = tk.Label(header, image=logo_tk, bg="#375aab")
     logo_label.image = logo_tk
-    logo_label.pack(side="left", padx=32, pady=10)
+    logo_label.pack(side="left", padx=22, pady=9)
 
-    tk.Label(header, text="AcademyGo", bg="#375aab", fg="white",
-             font=("Segoe UI", 35, "bold"), pady=15).pack(side="left", padx=28)
-    tk.Label(header, text="Gestión profesional de alumnos", bg="#375aab", fg="#c7e0fa",
-             font=("Segoe UI", 16, "italic")).pack(side="left", padx=10, pady=25)
+    tk.Label(header, text="AcademyGo", bg="#375aab", fg="white", font=("Segoe UI", 25, "bold")).pack(side="left", padx=16)
+    tk.Label(header, text="Gestión profesional", bg="#375aab", fg="#c7e0fa", font=("Segoe UI", 17, "italic")).pack(side="left", padx=8, pady=24)
 
-    frame = ttk.Frame(root, padding=26)
-    frame.pack(fill='both', expand=True, padx=40, pady=18)
+    # Notebook / pestañas
+    notebook = ttk.Notebook(root)
+    notebook.pack(fill='both', expand=True, padx=9, pady=9)
+
+    # Crear pestañas con colores más fuertes
+    tab_alumnos = tk.Frame(notebook, bg=TAB_COLORS[0])
+    notebook.add(tab_alumnos, text="Alumnos")
+
+    tab_cursos = tk.Frame(notebook, bg=TAB_COLORS[1])
+    notebook.add(tab_cursos, text="Cursos")
+
+    tab_inscr = tk.Frame(notebook, bg=TAB_COLORS[2])
+    notebook.add(tab_inscr, text="Inscripciones")
+
+    tab_cfin = tk.Frame(notebook, bg=TAB_COLORS[3])
+    notebook.add(tab_cfin, text="Cursos Finalizados")
+
+    tab_familias = tk.Frame(notebook, bg=TAB_COLORS[4])
+    notebook.add(tab_familias, text="Familias Profesionales")
+
+    tab_adj = tk.Frame(notebook, bg=TAB_COLORS[5])
+    notebook.add(tab_adj, text="Adjuntos")
+
+    # Contenido y paginación en ALUMNOS
+    contenido_alumnos(tab_alumnos, root)
+
+    # Contenido y paginación en CURSOS
+    contenido_cursos(tab_cursos, root)
+
+    # Maquetas para otras pestañas
+    pestaña_maqueta(tab_inscr, "Gestión de Inscripciones\n(Próximamente)", TAB_COLORS[2])
+    pestaña_maqueta(tab_cfin, "Cursos Finalizados\n(Próximamente)", TAB_COLORS[3])
+    pestaña_maqueta(tab_familias, "Gestión Familias\n(Próximamente)", TAB_COLORS[4])
+    pestaña_maqueta(tab_adj, "Adjuntos/Documentos\n(Próximamente)", TAB_COLORS[5])
+
+    # Footer
+    tk.Label(
+        root,
+        text="Desarrollado por PRACTICADORES.DEV  |  AcademyGo",
+        font=("Segoe UI", 11, "italic"),
+        bg="#e9f0fb", fg="#666"
+    ).pack(side='bottom', pady=3)
+
+    root.mainloop()
+
+# --- CONTENIDO PESTAÑA ALUMNOS ---
+
+def contenido_alumnos(tab, root):
+    frame = ttk.Frame(tab, padding=22)
+    frame.pack(fill='both', expand=True, padx=26, pady=18)
 
     labels = ['Nombre', 'Apellidos', 'DNI', 'Teléfono', 'Mail', 'Fecha nacimiento (YYYY-MM-DD)', 'Nivel académico']
     keys = ['nombre', 'apellidos', 'dni', 'telefono', 'mail', 'f_nacimiento', 'niv_academico']
     campos = {}
 
     form = ttk.LabelFrame(frame, text="Datos del Alumno", padding=(20,12))
-    form.grid(row=0, column=0, sticky='nw', rowspan=2, pady=12)
+    form.grid(row=0, column=0, sticky='nw', rowspan=3, pady=12)
 
     for i, (label, key) in enumerate(zip(labels, keys)):
         ttk.Label(form, text=label + ":", anchor='w').grid(row=i, column=0, pady=7, sticky='e')
@@ -77,42 +142,38 @@ def crear_interfaz():
         entry.grid(row=i, column=1, pady=7, padx=7, sticky='w')
         campos[key] = entry
 
+    # Botones CRUD
     btns = ttk.Frame(form)
     btns.grid(row=7, column=0, columnspan=2, pady=(18, 10))
 
-    style = ttk.Style(root)
+    style = ttk.Style()
     style.theme_use('clam')
     style.configure('Accent.TButton', font=('Segoe UI', 12, 'bold'), foreground="white", background="#416bce")
     style.map('Accent.TButton', background=[('active', '#2b488a')])
     style.configure('Treeview',
-        background="#f7fbff",
-        foreground="#222",
-        rowheight=38,
-        fieldbackground="#f7fbff",
-        font=('Segoe UI', 12))
+                    background="#f7fbff",
+                    foreground="#222",
+                    rowheight=38,
+                    fieldbackground="#f7fbff",
+                    font=('Segoe UI', 12))
     style.configure('Treeview.Heading',
-        background="#375aab",
-        foreground="white",
-        font=('Segoe UI', 13, 'bold'),
-        relief='flat')
+                    background="#375aab",
+                    foreground="white",
+                    font=('Segoe UI', 13, 'bold'),
+                    relief='flat')
     style.map('Treeview', background=[('selected', '#c6e0fc')])
+
+    pagina_actual = [0]
 
     def guardar():
         valores = [campos[k].get() for k in keys]
-        dni = valores[2]
-        email = valores[4]
         if not valores[0]:
             messagebox.showwarning("Atención", "El nombre es obligatorio.")
             return
-        if not validar_dni(dni):
-            messagebox.showerror("DNI inválido", "El DNI introducido no es válido.")
-            return
-        if not validar_email(email):
-            messagebox.showerror("Email inválido", "El email introducido no es válido.")
-            return
         try:
             agregar_alumno(*valores)
-            cargar_pagina(tree)
+            pagina_actual[0] = 0
+            cargar_y_actualizar()
             limpiar_formulario(campos)
             messagebox.showinfo("Éxito", "Alumno agregado correctamente.")
         except Exception as e:
@@ -123,17 +184,9 @@ def crear_interfaz():
             messagebox.showwarning("Selecciona", "Selecciona un alumno de la tabla.")
             return
         valores = [campos[k].get() for k in keys]
-        dni = valores[2]
-        email = valores[4]
-        if not validar_dni(dni):
-            messagebox.showerror("DNI inválido", "El DNI introducido no es válido.")
-            return
-        if not validar_email(email):
-            messagebox.showerror("Email inválido", "El email introducido no es válido.")
-            return
         try:
             actualizar_alumno(root.selected_id, *valores)
-            cargar_pagina(tree)
+            cargar_y_actualizar()
             limpiar_formulario(campos)
             root.selected_id = None
             messagebox.showinfo("Éxito", "Alumno actualizado.")
@@ -147,7 +200,8 @@ def crear_interfaz():
         if messagebox.askyesno("Confirmar", "¿Seguro que quieres borrar este alumno?"):
             try:
                 borrar_alumno(root.selected_id)
-                cargar_pagina(tree)
+                pagina_actual[0] = 0
+                cargar_y_actualizar()
                 limpiar_formulario(campos)
                 root.selected_id = None
                 messagebox.showinfo("Éxito", "Alumno borrado.")
@@ -163,38 +217,42 @@ def crear_interfaz():
     ttk.Button(btns, text="🗑️ Borrar", command=borrar).pack(side='left', padx=7)
     ttk.Button(btns, text="🧹 Limpiar", command=limpiar).pack(side='left', padx=7)
 
+    # Tabla alumnos
     cols = ('ID', 'Nombre', 'Apellidos', 'DNI', 'Teléfono', 'Mail', 'Fecha nacimiento', 'Nivel académico')
     tree = ttk.Treeview(frame, columns=cols, show='headings', height=14)
     for i, col in enumerate(cols):
         tree.heading(col, text=col)
-        ancho = 65 if i==0 else 120 if i==6 else 110
+        ancho = 65 if i == 0 else 120 if i == 6 else 110
         tree.column(col, width=ancho, anchor='center')
-    tree.grid(row=0, column=1, padx=(30,5), pady=10, sticky='n')
+    tree.grid(row=0, column=1, padx=(30, 5), pady=10, sticky='n')
 
     scrollbar = ttk.Scrollbar(frame, orient="vertical", command=tree.yview)
     scrollbar.grid(row=0, column=2, sticky='ns', pady=10)
     tree.configure(yscrollcommand=scrollbar.set)
 
-    # Paginación
-    def siguiente_pagina():
-        global pagina_actual
-        total = contar_alumnos()
-        if (pagina_actual + 1) * limit < total:
-            pagina_actual += 1
-            cargar_pagina(tree)
+    def cargar_y_actualizar():
+        total = cargar_datos_alumnos(tree, pagina_actual[0])
+        btn_anterior.config(state=tk.NORMAL if pagina_actual[0] > 0 else tk.DISABLED)
+        max_pagina = max(0, (total - 1) // PAGINA_TAMANO)
+        btn_siguiente.config(state=tk.NORMAL if pagina_actual[0] < max_pagina else tk.DISABLED)
+        lbl_pagina.config(text=f"Página {pagina_actual[0] + 1} de {max_pagina + 1}")
 
-    def anterior_pagina():
-        global pagina_actual
-        if pagina_actual > 0:
-            pagina_actual -= 1
-            cargar_pagina(tree)
+    # Botones paginación
+    paginacion_frame = ttk.Frame(frame)
+    paginacion_frame.grid(row=2, column=1, pady=8, sticky='w')
 
-    pag_btns = ttk.Frame(frame)
-    pag_btns.grid(row=2, column=1, pady=8, sticky='e')
-    ttk.Button(pag_btns, text="Anterior", command=anterior_pagina).pack(side='left', padx=6)
-    ttk.Button(pag_btns, text="Siguiente", command=siguiente_pagina).pack(side='left', padx=6)
+    btn_anterior = ttk.Button(paginacion_frame, text="◀ Anterior", command=lambda: cambiar_pagina(-1))
+    btn_anterior.pack(side='left', padx=5)
+    btn_siguiente = ttk.Button(paginacion_frame, text="Siguiente ▶", command=lambda: cambiar_pagina(1))
+    btn_siguiente.pack(side='left', padx=5)
+    lbl_pagina = ttk.Label(paginacion_frame, text="Página 1")
+    lbl_pagina.pack(side='left', padx=10)
 
-    cargar_pagina(tree)
+    def cambiar_pagina(direccion):
+        pagina_actual[0] += direccion
+        cargar_y_actualizar()
+
+    cargar_y_actualizar()
 
     def seleccionar_fila(event):
         item = tree.focus()
@@ -209,9 +267,9 @@ def crear_interfaz():
 
     tree.bind('<<TreeviewSelect>>', seleccionar_fila)
 
-    # Botones PDF/Imprimir/Inicio/Salir/Adjuntos/Backup (debajo de la tabla)
+    # Botones PDF/Imprimir/Inicio/Salir (debajo de la tabla)
     extra_btns = ttk.Frame(frame)
-    extra_btns.grid(row=1, column=1, pady=(14,0), sticky='w')
+    extra_btns.grid(row=1, column=1, pady=(14, 0), sticky='w')
 
     def exportar():
         datos = [tree.item(f, 'values') for f in tree.get_children()]
@@ -223,43 +281,191 @@ def crear_interfaz():
 
     def volver_a_bienvenida():
         root.destroy()
+        from ui import pantalla_bienvenida
         pantalla_bienvenida()
 
     def salir_app():
         root.destroy()
 
-    def adjuntar():
-        if not hasattr(root, 'selected_id') or not root.selected_id:
-            messagebox.showwarning("Selecciona", "Selecciona un alumno primero.")
-            return
-        ruta = filedialog.askopenfilename(title="Selecciona archivo")
-        if ruta:
-            adjuntar_documento(root.selected_id, ruta)
-            messagebox.showinfo("Adjunto", "Archivo adjuntado correctamente.")
-
-    def hacer_backup():
-        archivo = backup_base_datos()
-        if archivo:
-            messagebox.showinfo("Backup", f"Backup guardado en: {archivo}")
-        else:
-            messagebox.showerror("Backup", "No se pudo realizar el backup.")
-
-    ttk.Button(extra_btns, text="📄 Exportar a PDF", command=exportar, style='Accent.TButton').pack(side='left', padx=6, ipadx=4, ipady=3)
+    ttk.Button(extra_btns, text="📄 Exportar a PDF", command=exportar, style='Accent.TButton').pack(side='left', padx=6,
+                                                                                                     ipadx=4, ipady=3)
     ttk.Button(extra_btns, text="🖨️ Imprimir", command=imprimir).pack(side='left', padx=6, ipadx=4, ipady=3)
-    ttk.Button(extra_btns, text="📎 Adjuntar documento", command=adjuntar).pack(side='left', padx=6, ipadx=4, ipady=3)
-    ttk.Button(extra_btns, text="💾 Backup", command=hacer_backup).pack(side='left', padx=6, ipadx=4, ipady=3)
-    ttk.Button(extra_btns, text="🏠 Volver a inicio", command=volver_a_bienvenida, style='Accent.TButton').pack(side='left', padx=6, ipadx=4, ipady=3)
-    ttk.Button(extra_btns, text="❌ Salir", command=salir_app, style='Accent.TButton').pack(side='left', padx=6, ipadx=4, ipady=3)
+    ttk.Button(extra_btns, text="🏠 Volver a inicio", command=volver_a_bienvenida, style='Accent.TButton').pack(side='left',
+                                                                                                             padx=6,
+                                                                                                             ipadx=4,
+                                                                                                             ipady=3)
+    ttk.Button(extra_btns, text="❌ Salir", command=salir_app, style='Accent.TButton').pack(side='left', padx=6, ipadx=4,
+                                                                                           ipady=3)
 
-    ttk.Separator(root, orient='horizontal').pack(fill='x', pady=4)
-    tk.Label(
-        root,
-        text="Desarrollado por PRACTICADORES.DEV  |  AcademyGo",
-        font=("Segoe UI", 11, "italic"),
-        bg="#e9f0fb", fg="#666"
-    ).pack(side='bottom', pady=3)
 
-    root.mainloop()
+# --- CONTENIDO PESTAÑA CURSOS ---
+
+def contenido_cursos(tab, root):
+    frame = ttk.Frame(tab, padding=22)
+    frame.pack(fill='both', expand=True, padx=26, pady=18)
+
+    labels = ['Referencia', 'Nombre curso', 'Familia ID', 'Descripción', 'Fecha curso (YYYY-MM-DD)', 'Nivel profesional']
+    keys = ['ref_curso', 'nombre_curso', 'fam_curso', 'desc_curso', 'fecha_curso', 'niv_prof']
+    campos = {}
+
+    form = ttk.LabelFrame(frame, text="Datos del Curso", padding=(20, 12))
+    form.grid(row=0, column=0, sticky='nw', rowspan=3, pady=12)
+
+    for i, (label, key) in enumerate(zip(labels, keys)):
+        ttk.Label(form, text=label + ":", anchor='w').grid(row=i, column=0, pady=7, sticky='e')
+        entry = ttk.Entry(form, width=30, font=('Segoe UI', 12))
+        entry.grid(row=i, column=1, pady=7, padx=7, sticky='w')
+        campos[key] = entry
+
+    # Botones CRUD
+    btns = ttk.Frame(form)
+    btns.grid(row=7, column=0, columnspan=2, pady=(18, 10))
+
+    style = ttk.Style()
+    style.configure('Accent.TButton', font=('Segoe UI', 12, 'bold'), foreground="white", background="#416bce")
+    style.map('Accent.TButton', background=[('active', '#2b488a')])
+
+    pagina_actual = [0]
+
+    def limpiar_formulario():
+        for campo in campos.values():
+            campo.delete(0, tk.END)
+
+    def cargar_y_actualizar():
+        total = cargar_datos_cursos(tree, pagina_actual[0])
+        btn_anterior.config(state=tk.NORMAL if pagina_actual[0] > 0 else tk.DISABLED)
+        max_pagina = max(0, (total - 1) // PAGINA_TAMANO)
+        btn_siguiente.config(state=tk.NORMAL if pagina_actual[0] < max_pagina else tk.DISABLED)
+        lbl_pagina.config(text=f"Página {pagina_actual[0] + 1} de {max_pagina + 1}")
+
+    def guardar():
+        valores = [campos[k].get() for k in keys]
+        if not valores[0]:
+            messagebox.showwarning("Atención", "La referencia es obligatoria.")
+            return
+        try:
+            agregar_curso(*valores)
+            pagina_actual[0] = 0
+            cargar_y_actualizar()
+            limpiar_formulario()
+            messagebox.showinfo("Éxito", "Curso agregado correctamente.")
+        except Exception as e:
+            messagebox.showerror("Error", f"No se pudo agregar: {e}")
+
+    def actualizar():
+        if not hasattr(tab, 'selected_id') or not tab.selected_id:
+            messagebox.showwarning("Selecciona", "Selecciona un curso de la tabla.")
+            return
+        valores = [campos[k].get() for k in keys]
+        try:
+            actualizar_curso(tab.selected_id, *valores)
+            cargar_y_actualizar()
+            limpiar_formulario()
+            tab.selected_id = None
+            messagebox.showinfo("Éxito", "Curso actualizado.")
+        except Exception as e:
+            messagebox.showerror("Error", f"No se pudo actualizar: {e}")
+
+    def borrar():
+        if not hasattr(tab, 'selected_id') or not tab.selected_id:
+            messagebox.showwarning("Selecciona", "Selecciona un curso de la tabla.")
+            return
+        if messagebox.askyesno("Confirmar", "¿Seguro que quieres borrar este curso?"):
+            try:
+                borrar_curso(tab.selected_id)
+                cargar_y_actualizar()
+                limpiar_formulario()
+                tab.selected_id = None
+                messagebox.showinfo("Éxito", "Curso borrado.")
+            except Exception as e:
+                messagebox.showerror("Error", f"No se pudo borrar: {e}")
+
+    ttk.Button(btns, text="💾 Guardar", command=guardar, style='Accent.TButton').pack(side='left', padx=7)
+    ttk.Button(btns, text="✏️ Actualizar", command=actualizar).pack(side='left', padx=7)
+    ttk.Button(btns, text="🗑️ Borrar", command=borrar).pack(side='left', padx=7)
+    ttk.Button(btns, text="🧹 Limpiar", command=limpiar_formulario).pack(side='left', padx=7)
+
+    # Tabla cursos
+    cols = ('ID', 'Referencia', 'Nombre curso', 'Familia ID', 'Descripción', 'Fecha curso', 'Nivel profesional')
+    tree = ttk.Treeview(frame, columns=cols, show='headings', height=14)
+    for i, col in enumerate(cols):
+        tree.heading(col, text=col)
+        ancho = 65 if i == 0 else 130 if i in (2, 4) else 110
+        tree.column(col, width=ancho, anchor='center')
+    tree.grid(row=0, column=1, padx=(30, 5), pady=10, sticky='n')
+
+    scrollbar = ttk.Scrollbar(frame, orient="vertical", command=tree.yview)
+    scrollbar.grid(row=0, column=2, sticky='ns', pady=10)
+    tree.configure(yscrollcommand=scrollbar.set)
+
+    # Paginación
+    paginacion_frame = ttk.Frame(frame)
+    paginacion_frame.grid(row=2, column=1, pady=8, sticky='w')
+
+    btn_anterior = ttk.Button(paginacion_frame, text="◀ Anterior", command=lambda: cambiar_pagina(-1))
+    btn_anterior.pack(side='left', padx=5)
+    btn_siguiente = ttk.Button(paginacion_frame, text="Siguiente ▶", command=lambda: cambiar_pagina(1))
+    btn_siguiente.pack(side='left', padx=5)
+    lbl_pagina = ttk.Label(paginacion_frame, text="Página 1")
+    lbl_pagina.pack(side='left', padx=10)
+
+    def cambiar_pagina(direccion):
+        pagina_actual[0] += direccion
+        cargar_y_actualizar()
+
+    cargar_y_actualizar()
+
+    def seleccionar_fila(event):
+        item = tree.focus()
+        if item:
+            datos = tree.item(item, 'values')
+            for key, entry, value in zip(keys, campos.values(), datos[1:]):
+                entry.delete(0, tk.END)
+                entry.insert(0, value)
+            tab.selected_id = datos[0]
+        else:
+            tab.selected_id = None
+
+    tree.bind('<<TreeviewSelect>>', seleccionar_fila)
+
+    # Botones Exportar, Imprimir, Volver e Salir
+    extra_btns = ttk.Frame(frame)
+    extra_btns.grid(row=1, column=1, pady=(14, 0), sticky='w')
+
+    def exportar():
+        datos = [tree.item(f, 'values') for f in tree.get_children()]
+        cols = ('ID', 'Referencia', 'Nombre curso', 'Familia ID', 'Descripción', 'Fecha curso', 'Nivel profesional')
+        exportar_a_pdf(datos, cols)
+
+    def imprimir():
+        imprimir_pdf()
+
+    def volver_a_bienvenida():
+        root.destroy()
+        from ui import pantalla_bienvenida
+        pantalla_bienvenida()
+
+    def salir_app():
+        root.destroy()
+
+    ttk.Button(extra_btns, text="📄 Exportar a PDF", command=exportar, style='Accent.TButton').pack(side='left', padx=6,
+                                                                                                     ipadx=4, ipady=3)
+    ttk.Button(extra_btns, text="🖨️ Imprimir", command=imprimir).pack(side='left', padx=6, ipadx=4, ipady=3)
+    ttk.Button(extra_btns, text="🏠 Volver a inicio", command=volver_a_bienvenida, style='Accent.TButton').pack(side='left',
+                                                                                                             padx=6,
+                                                                                                             ipadx=4,
+                                                                                                             ipady=3)
+    ttk.Button(extra_btns, text="❌ Salir", command=salir_app, style='Accent.TButton').pack(side='left', padx=6, ipadx=4,
+                                                                                           ipady=3)
+
+# --- MAQUETAS PESTAÑAS VACÍAS ---
+
+def pestaña_maqueta(tab, texto="Funcionalidad en desarrollo...", color="#fafafa"):
+    f = tk.Frame(tab, bg=color)
+    f.pack(expand=True, fill="both")
+    tk.Label(f, text=texto, font=("Segoe UI", 24, "italic"), bg=color, fg="#375aab").pack(expand=True)
+
+# --- PANTALLA DE BIENVENIDA ---
 
 def pantalla_bienvenida():
     welcome = tk.Tk()
@@ -285,11 +491,13 @@ def pantalla_bienvenida():
         canvas.delete("pyramid")
         base_coords = [(-size, size), (size, size), (0, -size)]
         apex = (0, -size * 1.5)
+
         def rotate(x, y, angle_deg):
             rad = math.radians(angle_deg)
             xr = x * math.cos(rad) - y * math.sin(rad)
             yr = x * math.sin(rad) + y * math.cos(rad)
             return xr, yr
+
         rotated_base = [rotate(x, y, a) for x, y in base_coords]
         rotated_apex = rotate(*apex, a)
         points_base = [(center_x + x, center_y + y) for x, y in rotated_base]
@@ -298,6 +506,7 @@ def pantalla_bienvenida():
             p1 = points_base[i]
             p2 = points_base[(i + 1) % 3]
             canvas.create_polygon(p1, p2, apex_abs, fill="#4f8a8b", outline="#ffffff", tags="pyramid")
+        # base
         canvas.create_polygon(*points_base, fill="#36608a", outline="#ffffff", tags="pyramid")
 
     def animate():
