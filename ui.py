@@ -26,9 +26,9 @@ def crear_interfaz():
     # Aplicar pantalla completa o maximizada según sistema operativo
     sistema = platform.system()
     if sistema == 'Windows':
-        root.state('zoomed')  # Compatible con Windows
+        root.state('zoomed')
     else:
-        root.attributes('-zoomed', True)  # Compatible con Linux/macOS
+        root.attributes('-zoomed', True)
 
     root.configure(bg="#e9f0fb")
 
@@ -162,7 +162,7 @@ def crear_interfaz():
 
     tree.bind('<<TreeviewSelect>>', seleccionar_fila)
 
-    # Botones PDF/Imprimir (debajo de la tabla)
+    # Botones PDF/Imprimir/Inicio/Salir (debajo de la tabla)
     extra_btns = ttk.Frame(frame)
     extra_btns.grid(row=1, column=1, pady=(14,0), sticky='w')
 
@@ -174,8 +174,17 @@ def crear_interfaz():
     def imprimir():
         imprimir_pdf()
 
+    def volver_a_bienvenida():
+        root.destroy()
+        pantalla_bienvenida()
+
+    def salir_app():
+        root.destroy()
+
     ttk.Button(extra_btns, text="📄 Exportar a PDF", command=exportar, style='Accent.TButton').pack(side='left', padx=6, ipadx=4, ipady=3)
     ttk.Button(extra_btns, text="🖨️ Imprimir", command=imprimir).pack(side='left', padx=6, ipadx=4, ipady=3)
+    ttk.Button(extra_btns, text="🏠 Volver a inicio", command=volver_a_bienvenida, style='Accent.TButton').pack(side='left', padx=6, ipadx=4, ipady=3)
+    ttk.Button(extra_btns, text="❌ Salir", command=salir_app, style='Accent.TButton').pack(side='left', padx=6, ipadx=4, ipady=3)
 
     ttk.Separator(root, orient='horizontal').pack(fill='x', pady=4)
     tk.Label(
@@ -188,8 +197,6 @@ def crear_interfaz():
     root.mainloop()
 
 def pantalla_bienvenida():
-    import math
-
     welcome = tk.Tk()
     welcome.title("Bienvenido a AcademyGo")
     welcome.attributes('-fullscreen', True)
@@ -197,10 +204,9 @@ def pantalla_bienvenida():
 
     screen_width = welcome.winfo_screenwidth()
     screen_height = welcome.winfo_screenheight()
-    logo_size = min(int(screen_height * 0.18), 220)  # Más pequeño
-    canvas_h = int(screen_height * 0.22)  # Menor altura de canvas
+    logo_size = min(int(screen_height * 0.18), 220)
+    canvas_h = int(screen_height * 0.22)
 
-    # Canvas para la pirámide (más compacto)
     canvas = tk.Canvas(welcome, width=screen_width, height=canvas_h, bg="#375aab", highlightthickness=0)
     canvas.pack()
     welcome.update_idletasks()
@@ -238,7 +244,6 @@ def pantalla_bienvenida():
 
     animate()
 
-    # Logo debajo de la pirámide
     logo_img = Image.open("academygo.png")
     logo_img = logo_img.resize((logo_size, logo_size), Image.LANCZOS)
     logo_tk = ImageTk.PhotoImage(logo_img)
@@ -246,7 +251,6 @@ def pantalla_bienvenida():
     logo_label.image = logo_tk
     logo_label.pack(pady=8)
 
-    # Títulos equilibrados
     tk.Label(
         welcome,
         text="AcademyGo",
@@ -263,7 +267,6 @@ def pantalla_bienvenida():
         font=("Segoe UI", 20, "italic")
     ).pack(pady=2)
 
-    # Botones bien visibles
     botones = tk.Frame(welcome, bg="#375aab")
     botones.pack(pady=30)
 
@@ -284,7 +287,6 @@ def pantalla_bienvenida():
         botones, text="Salir", command=welcome.quit, style='Big.TButton'
     ).pack(side='left', padx=30, ipadx=8, ipady=6)
 
-    # Pie de pantalla
     tk.Label(
         welcome,
         text="© 2025 PRACTICADORES.DEV",
