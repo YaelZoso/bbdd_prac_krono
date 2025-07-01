@@ -4,6 +4,7 @@ from PIL import Image, ImageTk
 from alumno_crud import agregar_alumno, obtener_alumnos, actualizar_alumno, borrar_alumno
 from pdf_export import exportar_a_pdf, imprimir_pdf
 import platform
+import math
 
 def limpiar_formulario(campos):
     for campo in campos.values():
@@ -187,40 +188,84 @@ def crear_interfaz():
     root.mainloop()
 
 def pantalla_bienvenida():
+    import math
+
     welcome = tk.Tk()
     welcome.title("Bienvenido a AcademyGo")
     welcome.attributes('-fullscreen', True)
     welcome.configure(bg="#375aab")
 
-    logo_img = Image.open("academygo.png")
     screen_width = welcome.winfo_screenwidth()
     screen_height = welcome.winfo_screenheight()
-    logo_size = min(int(screen_height * 0.33), 350)
+    logo_size = min(int(screen_height * 0.18), 220)  # Más pequeño
+    canvas_h = int(screen_height * 0.22)  # Menor altura de canvas
+
+    # Canvas para la pirámide (más compacto)
+    canvas = tk.Canvas(welcome, width=screen_width, height=canvas_h, bg="#375aab", highlightthickness=0)
+    canvas.pack()
+    welcome.update_idletasks()
+
+    center_x = canvas.winfo_width() // 2
+    center_y = canvas.winfo_height() // 2
+    size = min(canvas_h // 2, 85)
+    angle = 0
+
+    def draw_pyramid(a):
+        canvas.delete("pyramid")
+        base_coords = [(-size, size), (size, size), (0, -size)]
+        apex = (0, -size * 1.5)
+        def rotate(x, y, angle_deg):
+            rad = math.radians(angle_deg)
+            xr = x * math.cos(rad) - y * math.sin(rad)
+            yr = x * math.sin(rad) + y * math.cos(rad)
+            return xr, yr
+        rotated_base = [rotate(x, y, a) for x, y in base_coords]
+        rotated_apex = rotate(*apex, a)
+        points_base = [(center_x + x, center_y + y) for x, y in rotated_base]
+        apex_abs = (center_x + rotated_apex[0], center_y + rotated_apex[1])
+        for i in range(3):
+            p1 = points_base[i]
+            p2 = points_base[(i + 1) % 3]
+            canvas.create_polygon(p1, p2, apex_abs, fill="#4f8a8b", outline="#ffffff", tags="pyramid")
+        # base
+        canvas.create_polygon(*points_base, fill="#36608a", outline="#ffffff", tags="pyramid")
+
+    def animate():
+        nonlocal angle
+        draw_pyramid(angle)
+        angle += 2
+        canvas.after(40, animate)
+
+    animate()
+
+    # Logo debajo de la pirámide
+    logo_img = Image.open("academygo.png")
     logo_img = logo_img.resize((logo_size, logo_size), Image.LANCZOS)
     logo_tk = ImageTk.PhotoImage(logo_img)
-
     logo_label = tk.Label(welcome, image=logo_tk, bg="#375aab")
     logo_label.image = logo_tk
-    logo_label.pack(pady=int(screen_height * 0.08))
+    logo_label.pack(pady=8)
 
+    # Títulos equilibrados
     tk.Label(
         welcome,
         text="AcademyGo",
         bg="#375aab",
         fg="white",
-        font=("Segoe UI", 48, "bold")
-    ).pack(pady=10)
+        font=("Segoe UI", 42, "bold")
+    ).pack(pady=4)
 
     tk.Label(
         welcome,
         text="PRACTICADORES.DEV",
         bg="#375aab",
         fg="#c7e0fa",
-        font=("Segoe UI", 22, "italic")
-    ).pack(pady=6)
+        font=("Segoe UI", 20, "italic")
+    ).pack(pady=2)
 
+    # Botones bien visibles
     botones = tk.Frame(welcome, bg="#375aab")
-    botones.pack(pady=40)
+    botones.pack(pady=30)
 
     def comenzar():
         welcome.destroy()
@@ -228,23 +273,24 @@ def pantalla_bienvenida():
 
     style = ttk.Style(welcome)
     style.theme_use('clam')
-    style.configure('Big.TButton', font=('Segoe UI', 19, 'bold'), foreground="white", background="#416bce", padding=14)
+    style.configure('Big.TButton', font=('Segoe UI', 17, 'bold'), foreground="white", background="#416bce", padding=13)
     style.map('Big.TButton', background=[('active', '#2b488a')])
 
     ttk.Button(
         botones, text="Comenzar", command=comenzar, style='Big.TButton'
-    ).pack(side='left', padx=30, ipadx=8, ipady=8)
+    ).pack(side='left', padx=30, ipadx=8, ipady=6)
 
     ttk.Button(
         botones, text="Salir", command=welcome.quit, style='Big.TButton'
-    ).pack(side='left', padx=30, ipadx=8, ipady=8)
+    ).pack(side='left', padx=30, ipadx=8, ipady=6)
 
+    # Pie de pantalla
     tk.Label(
         welcome,
         text="© 2025 PRACTICADORES.DEV",
         bg="#375aab",
         fg="#9dc7fb",
-        font=("Segoe UI", 14, "italic")
-    ).pack(side='bottom', pady=20)
+        font=("Segoe UI", 13, "italic")
+    ).pack(side='bottom', pady=14)
 
     welcome.mainloop()
