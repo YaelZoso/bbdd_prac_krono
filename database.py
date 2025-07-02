@@ -1,7 +1,9 @@
 import mysql.connector
 
 def crear_base_si_no_existe():
-    # Conecta al servidor MySQL/MariaDB sin especificar base
+    """
+    Crea la base de datos 'academia' si no existe.
+    """
     conn = mysql.connector.connect(
         host="localhost",
         user="root",
@@ -16,7 +18,9 @@ def crear_base_si_no_existe():
     conn.close()
 
 def crear_tablas():
-    # Conecta a la base ya existente (o recién creada)
+    """
+    Crea todas las tablas necesarias si no existen.
+    """
     conn = mysql.connector.connect(
         host="localhost",
         user="root",
@@ -25,7 +29,7 @@ def crear_tablas():
     )
     cursor = conn.cursor()
 
-    # 1. Tabla de Familias Profesionales
+    # Tabla de Familias Profesionales
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS fam_prof (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -34,7 +38,7 @@ def crear_tablas():
         )
     ''')
 
-    # 2. Tabla de Cursos
+    # Tabla de Cursos
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS cursos (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -48,7 +52,7 @@ def crear_tablas():
         )
     ''')
 
-    # 3. Tabla de Alumnos
+    # Tabla de Alumnos
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS alumnos (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -62,7 +66,7 @@ def crear_tablas():
         )
     ''')
 
-    # 4. Tabla N:M de relación Alumnos-Cursos
+    # Tabla N:M Alumnos-Cursos (inscripciones)
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS alumno_curso (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -73,7 +77,7 @@ def crear_tablas():
         )
     ''')
 
-    # 5. Tabla de finalización de cursos
+    # Tabla de cursos finalizados
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS cursos_fin (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -85,7 +89,7 @@ def crear_tablas():
         )
     ''')
 
-    # 6. Tabla de Adjuntos para documentos/fotos
+    # Tabla de adjuntos (documentos/fotos)
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS adjuntos (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -101,7 +105,18 @@ def crear_tablas():
     cursor.close()
     conn.close()
 
-# Si quieres que el script se ejecute solo al llamar directamente:
+def conectar():
+    """
+    Devuelve una conexión a la base de datos 'academia'.
+    Utilízala en el resto de tus módulos para todas las operaciones CRUD.
+    """
+    return mysql.connector.connect(
+        host="localhost",
+        user="root",
+        password="TuContraseñaSegura",  # Cambia por la tuya
+        database="academia"
+    )
+
 if __name__ == "__main__":
     crear_base_si_no_existe()
     crear_tablas()
