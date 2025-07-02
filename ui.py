@@ -4,6 +4,7 @@ from PIL import Image, ImageTk
 from alumno_crud import agregar_alumno, obtener_alumnos, actualizar_alumno, borrar_alumno
 from crud_otros import agregar_curso, obtener_cursos, actualizar_curso, borrar_curso
 from pdf_export import exportar_a_pdf, imprimir_pdf
+from backup_utils import backup_base_datos
 import platform
 import math
 
@@ -142,7 +143,7 @@ def contenido_alumnos(tab, root):
         entry.grid(row=i, column=1, pady=7, padx=7, sticky='w')
         campos[key] = entry
 
-    # Botones CRUD
+    # Botones CRUD + Backup
     btns = ttk.Frame(form)
     btns.grid(row=7, column=0, columnspan=2, pady=(18, 10))
 
@@ -212,10 +213,18 @@ def contenido_alumnos(tab, root):
         limpiar_formulario(campos)
         root.selected_id = None
 
+    def hacer_backup():
+        archivo = backup_base_datos()
+        if archivo:
+            messagebox.showinfo("Backup realizado", f"Backup creado en:\n{archivo}")
+        else:
+            messagebox.showerror("Error", "No se pudo realizar el backup.")
+
     ttk.Button(btns, text="💾 Guardar", command=guardar, style='Accent.TButton').pack(side='left', padx=7)
     ttk.Button(btns, text="✏️ Actualizar", command=actualizar).pack(side='left', padx=7)
     ttk.Button(btns, text="🗑️ Borrar", command=borrar).pack(side='left', padx=7)
     ttk.Button(btns, text="🧹 Limpiar", command=limpiar).pack(side='left', padx=7)
+    ttk.Button(btns, text="💽 Backup BD", command=hacer_backup).pack(side='left', padx=7)
 
     # Tabla alumnos
     cols = ('ID', 'Nombre', 'Apellidos', 'DNI', 'Teléfono', 'Mail', 'Fecha nacimiento', 'Nivel académico')
@@ -317,7 +326,7 @@ def contenido_cursos(tab, root):
         entry.grid(row=i, column=1, pady=7, padx=7, sticky='w')
         campos[key] = entry
 
-    # Botones CRUD
+    # Botones CRUD + Backup
     btns = ttk.Frame(form)
     btns.grid(row=7, column=0, columnspan=2, pady=(18, 10))
 
@@ -380,10 +389,18 @@ def contenido_cursos(tab, root):
             except Exception as e:
                 messagebox.showerror("Error", f"No se pudo borrar: {e}")
 
+    def hacer_backup():
+        archivo = backup_base_datos()
+        if archivo:
+            messagebox.showinfo("Backup realizado", f"Backup creado en:\n{archivo}")
+        else:
+            messagebox.showerror("Error", "No se pudo realizar el backup.")
+
     ttk.Button(btns, text="💾 Guardar", command=guardar, style='Accent.TButton').pack(side='left', padx=7)
     ttk.Button(btns, text="✏️ Actualizar", command=actualizar).pack(side='left', padx=7)
     ttk.Button(btns, text="🗑️ Borrar", command=borrar).pack(side='left', padx=7)
     ttk.Button(btns, text="🧹 Limpiar", command=limpiar_formulario).pack(side='left', padx=7)
+    ttk.Button(btns, text="💽 Backup BD", command=hacer_backup).pack(side='left', padx=7)
 
     # Tabla cursos
     cols = ('ID', 'Referencia', 'Nombre curso', 'Familia ID', 'Descripción', 'Fecha curso', 'Nivel profesional')
