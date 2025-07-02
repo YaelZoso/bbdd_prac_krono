@@ -9,6 +9,8 @@ from pdf_export import exportar_a_pdf, imprimir_pdf
 from backup_utils import backup_base_datos
 import platform
 import math
+from reportes import abrir_reportes
+from busqueda_avanzada import abrir_busqueda_avanzada
 
 TAB_COLORS = [
     "#d4e2fc",   # Alumnos
@@ -102,6 +104,13 @@ def crear_interfaz():
     tk.Label(header, text="AcademyGo", bg="#375aab", fg="white", font=("Segoe UI", 25, "bold")).pack(side="left", padx=16)
     tk.Label(header, text="Gestión profesional", bg="#375aab", fg="#c7e0fa", font=("Segoe UI", 17, "italic")).pack(side="left", padx=8, pady=24)
 
+    # --- BOTONES DE ACCIONES AVANZADAS ---
+    acciones = tk.Frame(root, bg="#e9f0fb")
+    acciones.pack(fill='x', padx=12, pady=(4, 0))
+    ttk.Button(acciones, text="🔍 Búsqueda Avanzada", command=lambda: abrir_busqueda_avanzada(root)).pack(side='left', padx=9, ipadx=6, ipady=3)
+    ttk.Button(acciones, text="📊 Reportes", command=lambda: abrir_reportes(root)).pack(side='left', padx=9, ipadx=6, ipady=3)
+
+    # Notebook (pestañas)
     notebook = ttk.Notebook(root)
     notebook.pack(fill='both', expand=True, padx=9, pady=9)
     tab_alumnos = tk.Frame(notebook, bg=TAB_COLORS[0]); notebook.add(tab_alumnos, text="Alumnos")
