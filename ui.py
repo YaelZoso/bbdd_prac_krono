@@ -508,10 +508,12 @@ def contenido_finalizados(tab, root):
 # -------- CRUD FAMILIAS --------
 def contenido_familias(tab, root):
     frame = ttk.Frame(tab, padding=22)
-    frame.pack(fill='both', expand=True, padx=26, pady=18)
+    frame.pack(fill='both', expand=True, padx=36, pady=18)
+    
     campos = {'nombre': None, 'desc': None}
     form = ttk.LabelFrame(frame, text="Familia Profesional", padding=(20, 12))
     form.grid(row=0, column=0, sticky='nw', pady=12)
+    
     ttk.Label(form, text="Nombre:", anchor='w').grid(row=0, column=0, pady=7, sticky='e')
     campos['nombre'] = ttk.Entry(form, width=30, font=('Segoe UI', 12))
     campos['nombre'].grid(row=0, column=1, pady=7, padx=7)
@@ -528,11 +530,18 @@ def contenido_familias(tab, root):
 
     # --- Tabla familias ---
     cols = ('ID', 'Nombre', 'Descripción')
-    tree = ttk.Treeview(frame, columns=cols, show='headings', height=14)
+    tree = ttk.Treeview(frame, columns=cols, show='headings', height=18)
     for i, col in enumerate(cols):
+        ancho = 80 if col == 'ID' else (180 if col == 'Nombre' else 380)  # ancho para Descripción
         tree.heading(col, text=col)
-        tree.column(col, width=120 if i == 1 else 90, anchor='center')
-    tree.grid(row=0, column=1, padx=(30, 5), pady=10, sticky='n')
+        tree.column(col, width=ancho, anchor='center')
+    tree.grid(row=0, column=1, padx=(36, 12), pady=10, sticky='nsew')  # MÁS PADX, sticky nsew
+
+    # --- PERMITE QUE TREEVIEW SE EXPANDA AL REDIMENSIONAR ---
+    frame.grid_columnconfigure(1, weight=1)
+    frame.grid_rowconfigure(0, weight=1)
+
+    # --- SCROLLBAR ---
     scrollbar = ttk.Scrollbar(frame, orient="vertical", command=tree.yview)
     scrollbar.grid(row=0, column=2, sticky='ns')
     tree.configure(yscrollcommand=scrollbar.set)
